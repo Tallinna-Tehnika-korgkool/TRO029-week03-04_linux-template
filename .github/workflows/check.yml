@@ -4,35 +4,67 @@ on:
   push:
     branches:
       - "**"   # käivita igal branchil
-  pull_request:
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout tudengi repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Install sõltuvused (vajadusel lisa siia oma ROS2 docker image)
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      # Näidis: kontrolli, et failid eksisteeriksid
-      - name: Check required files
+      - name: Validate assignment
         run: |
-          test -f harjutus/kasutatud_käsud.txt
-          test -f harjutus/minu_fail.txt
+          echo "🚀 Alustan kontrolli..."
+          ERRORS=0
 
-      # Näidis: jooksuta lihtne test
-      - name: Run basic test
-        run: |
-          echo "Running tests..."
-          if grep -q "mkdir" harjutus/kasutatud_käsud.txt; then
-            echo "✅ mkdir found"
+          # Kontrolli failid
+          echo "📂 Kontrollin faile..."
+          for f in "harjutus/kasutatud_käsud.txt" "harjutus/minu_fail.txt"; do
+            if [ -f "$f" ]; then
+              echo "✅ Fail olemas: $f"
+            else
+              echo "❌ Puudub fail: $f"
+              ERRORS=$((ERRORS+1))
+            fi
+          done
+
+          # Kontrolli vajalikud käsud
+          echo "🔍 Kontrollin kasutatud käske..."
+          REQUIRED=("mkdir" "nano" "chmod" "ls" "sleep" "kill")
+          if [ -f "harjutus/kasutatud_käsud.txt" ]; then
+            for cmd in "${REQUIRED[@]}"; do
+              if grep -q "$cmd" harjutus/kasutatud_käsud.txt; then
+                echo "✅ Käsk leitud: $cmd"
+              else
+                echo "❌ Käsk puudub: $cmd"
+                ERRORS=$((ERRORS+1))
+              fi
+            done
           else
-            echo "❌ mkdir missing" && exit 1
+            echo "⚠️ Käske ei saa kontrollida, sest harjutus/kasutatud_käsud.txt puudub"
+            ERRORS=$((ERRORS+1))
+          fi
+
+          # Kontrolli faili õigused
+          echo "🔑 Kontrollin faili õiguseid..."
+          if [ -f "harjutus/minu_fail.txt" ]; then
+            PERMS=$(stat -c "%A" harjutus/minu_fail.txt)
+            echo "Faili õigused: $PERMS"
+            if echo "$PERMS" | grep -q "rw"; then
+              echo "✅ Failil on omaniku RW õigused"
+            else
+              echo "❌ Failil ei ole omaniku RW õiguseid"
+              ERRORS=$((ERRORS+1))
+            fi
+          fi
+
+          # Kokkuvõte
+          echo "--------------------------------"
+          if [ $ERRORS -eq 0 ]; then
+            echo "🎉 Kõik korras! Harjutus läbitud."
+            exit 0
+          else
+            echo "❌ Kokku leitud vigu: $ERRORS"
+            exit 1
           fi
