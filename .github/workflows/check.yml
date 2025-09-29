@@ -1,0 +1,38 @@
+name: Check Assignment
+
+on:
+  push:
+    branches:
+      - "**"   # käivita igal branchil
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout tudengi repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install sõltuvused (vajadusel lisa siia oma ROS2 docker image)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # Näidis: kontrolli, et failid eksisteeriksid
+      - name: Check required files
+        run: |
+          test -f harjutus/kasutatud_käsud.txt
+          test -f harjutus/minu_fail.txt
+
+      # Näidis: jooksuta lihtne test
+      - name: Run basic test
+        run: |
+          echo "Running tests..."
+          if grep -q "mkdir" harjutus/kasutatud_käsud.txt; then
+            echo "✅ mkdir found"
+          else
+            echo "❌ mkdir missing" && exit 1
+          fi
