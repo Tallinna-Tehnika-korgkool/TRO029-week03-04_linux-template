@@ -1,70 +1,374 @@
-name: Check Assignment
+name: Week 03-04 Linux Commands Check
 
 on:
   push:
     branches:
-      - "**"   # käivita igal branchil
+      - "**"
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  build-and-test:
+  validate-linux-exercise:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate assignment
+      - name: 🎯 Validate Linux Exercise
+        id: validation
         run: |
-          echo "🚀 Alustan kontrolli..."
+          echo "🚀 Alustan Week 03-04 harjutuse kontrolli..."
+          echo ""
+          
           ERRORS=0
-
-          # Kontrolli failid
-          echo "📂 Kontrollin faile..."
-          for f in "harjutus/kasutatud_käsud.txt" "harjutus/minu_fail.txt"; do
-            if [ -f "$f" ]; then
-              echo "✅ Fail olemas: $f"
+          WARNINGS=0
+          SUCCESS=0
+          
+          # ============================================
+          # FUNKTSIOONID
+          # ============================================
+          
+          check_file() {
+            local file="$1"
+            local description="${2:-$file}"
+            
+            if [ -f "$file" ]; then
+              echo "✅ Fail olemas: $description"
+              ((SUCCESS++))
+              return 0
             else
-              echo "❌ Puudub fail: $f"
-              ERRORS=$((ERRORS+1))
+              echo "❌ VIGA: Fail puudub: $description"
+              echo "   📍 Oodatud asukoht: $file"
+              echo "   💡 Loo see fail ülesande juhiste järgi"
+              ((ERRORS++))
+              return 1
             fi
-          done
-
-          # Kontrolli vajalikud käsud
-          echo "🔍 Kontrollin kasutatud käske..."
-          REQUIRED=("mkdir" "nano" "chmod" "ls" "sleep" "kill")
+          }
+          
+          check_file_not_empty() {
+            local file="$1"
+            local description="${2:-$file}"
+            
+            if [ ! -f "$file" ]; then
+              echo "⚠️ Ei saa kontrollida sisu - fail puudub: $file"
+              ((WARNINGS++))
+              return 1
+            fi
+            
+            if [ -s "$file" ]; then
+              echo "✅ Fail sisaldab sisu: $description"
+              ((SUCCESS++))
+              return 0
+            else
+              echo "❌ VIGA: Fail on tühi: $description"
+              echo "   💡 Lisa faili sisu vastavalt ülesandele"
+              ((ERRORS++))
+              return 1
+            fi
+          }
+          
+          check_command_in_file() {
+            local file="$1"
+            local cmd="$2"
+            local description="${3:-$cmd}"
+            
+            if [ ! -f "$file" ]; then
+              echo "⚠️ HOIATUS: Ei saa kontrollida käsku '$cmd' - fail $file puudub"
+              ((WARNINGS++))
+              return 1
+            fi
+            
+            # Otsi käsku (case-insensitive, lubab ka kommentaare)
+            if grep -qi "$cmd" "$file"; then
+              echo "✅ Leitud käsk: $description"
+              ((SUCCESS++))
+              return 0
+            else
+              echo "❌ VIGA: Käsk puudub: $description"
+              echo "   💡 Lisa '$cmd' faili $file"
+              ((ERRORS++))
+              return 1
+            fi
+          }
+          
+          check_permissions() {
+            local file="$1"
+            local expected_pattern="$2"
+            local description="${3:-failiõigused}"
+            
+            if [ ! -f "$file" ]; then
+              echo "⚠️ HOIATUS: Ei saa kontrollida õiguseid - fail $file puudub"
+              ((WARNINGS++))
+              return 1
+            fi
+            
+            local perms=$(stat -c "%A" "$file")
+            echo "   📋 Faili õigused: $perms (fail: $file)"
+            
+            # Kontrolli, kas omanikul on read+write õigused JA teistel ei ole
+            if echo "$perms" | grep -qE "^-rw-------"; then
+              echo "✅ Failiõigused korrektsed: $description"
+              echo "   ✓ Ainult omanik saab lugeda ja kirjutada (600 või -rw-------)"
+              ((SUCCESS++))
+              return 0
+            elif echo "$perms" | grep -qE "^-rw-"; then
+              echo "⚠️ HOIATUS: Failiõigused peaaegu korrektsed"
+              echo "   📋 Tegelik: $perms"
+              echo "   💡 Ideaalis peaks olema: -rw------- (chmod 600)"
+              echo "   💡 Aga kontroll läbib, sest omanikul on RW õigused"
+              ((SUCCESS++))
+              return 0
+            else
+              echo "❌ VIGA: Failiõigused valed: $perms"
+              echo "   💡 Nõutav: Omanikul peab olema lugemis- ja kirjutamisõigus"
+              echo "   💡 Käsk: chmod 600 $file"
+              ((ERRORS++))
+              return 1
+            fi
+          }
+          
+          # ============================================
+          # SAMM 1: FAILIDE OLEMASOLU
+          # ============================================
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📂 SAMM 1: Kontrollin nõutavate failide olemasolu"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Harjutuse kaust peaks olema
+          if [ -d "harjutus" ]; then
+            echo "✅ Kaust 'harjutus' olemas"
+            ((SUCCESS++))
+          else
+            echo "❌ VIGA: Kaust 'harjutus' puudub"
+            echo "   💡 Loo see käsuga: mkdir harjutus"
+            ((ERRORS++))
+          fi
+          
+          # Põhifailid
+          check_file "harjutus/minu_fail.txt" "Harjutuse põhifail (minu_fail.txt)"
+          check_file "harjutus/kasutatud_käsud.txt" "Kasutatud käskude nimekiri"
+          
+          echo ""
+          
+          # ============================================
+          # SAMM 2: FAILIDE SISU KONTROLL
+          # ============================================
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📝 SAMM 2: Kontrollin failide sisu"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # minu_fail.txt peab sisaldama teksti
+          check_file_not_empty "harjutus/minu_fail.txt" "minu_fail.txt"
+          
+          # kasutatud_käsud.txt peab sisaldama teksti
+          check_file_not_empty "harjutus/kasutatud_käsud.txt" "kasutatud_käsud.txt"
+          
+          echo ""
+          
+          # ============================================
+          # SAMM 3: NÕUTAVAD KÄSUD
+          # ============================================
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 SAMM 3: Kontrollin kasutatud käske"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📋 Vastavalt ülesandele peaksid kasutama järgmisi käske:"
+          echo "   1. mkdir (kataloogi loomine)"
+          echo "   2. touch või echo (faili loomine)"
+          echo "   3. chmod (õiguste muutmine)"
+          echo "   4. sleep & (protsessi käivitamine taustal)"
+          echo "   5. kill (protsessi lõpetamine)"
+          echo "   6. ls -l (failiõiguste vaatamine)"
+          echo ""
+          
+          # Nõutud käsud (vastavalt README ülesandele)
+          REQUIRED_COMMANDS=(
+            "mkdir:mkdir (kataloogi loomine)"
+            "chmod:chmod (failiõiguste muutmine)"
+            "sleep:sleep (protsessi käivitamine)"
+            "kill:kill (protsessi lõpetamine)"
+          )
+          
+          # Vähemalt üks faili loomise käsk
           if [ -f "harjutus/kasutatud_käsud.txt" ]; then
-            for cmd in "${REQUIRED[@]}"; do
-              if grep -q "$cmd" harjutus/kasutatud_käsud.txt; then
-                echo "✅ Käsk leitud: $cmd"
-              else
-                echo "❌ Käsk puudub: $cmd"
-                ERRORS=$((ERRORS+1))
+            if grep -qiE "(touch|echo)" "harjutus/kasutatud_käsud.txt"; then
+              echo "✅ Leitud käsk: faili loomine (touch või echo)"
+              ((SUCCESS++))
+            else
+              echo "❌ VIGA: Puudub faili loomise käsk"
+              echo "   💡 Kasuta kas 'touch' või 'echo' käsku"
+              ((ERRORS++))
+            fi
+          fi
+          
+          # Kontrolli ülejäänud käsud
+          for cmd_pair in "${REQUIRED_COMMANDS[@]}"; do
+            cmd="${cmd_pair%%:*}"
+            desc="${cmd_pair#*:}"
+            check_command_in_file "harjutus/kasutatud_käsud.txt" "$cmd" "$desc"
+          done
+          
+          echo ""
+          
+          # ============================================
+          # SAMM 4: FAILIÕIGUSED
+          # ============================================
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔑 SAMM 4: Kontrollin failiõiguseid"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📋 Ülesanne nõuab: Ainult sina (omanik) saad faili lugeda ja kirjutada"
+          echo "   💡 See tähendab õigusi: -rw------- või 600"
+          echo ""
+          
+          check_permissions "harjutus/minu_fail.txt" "rw-------" "ainult omaniku RW õigused"
+          
+          echo ""
+          
+          # ============================================
+          # SAMM 5: LISAPUNKTID (ei mõjuta tulemust)
+          # ============================================
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⭐ SAMM 5: Lisapunktid (valikuline)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          
+          # Kontrolli, kas kasutati ka teisi kasulikke käske
+          BONUS_COMMANDS=("pwd" "cd" "cat" "grep" "ls" "ps")
+          BONUS_FOUND=0
+          
+          if [ -f "harjutus/kasutatud_käsud.txt" ]; then
+            for cmd in "${BONUS_COMMANDS[@]}"; do
+              if grep -qi "$cmd" "harjutus/kasutatud_käsud.txt"; then
+                ((BONUS_FOUND++))
               fi
             done
-          else
-            echo "⚠️ Käske ei saa kontrollida, sest harjutus/kasutatud_käsud.txt puudub"
-            ERRORS=$((ERRORS+1))
-          fi
-
-          # Kontrolli faili õigused
-          echo "🔑 Kontrollin faili õiguseid..."
-          if [ -f "harjutus/minu_fail.txt" ]; then
-            PERMS=$(stat -c "%A" harjutus/minu_fail.txt)
-            echo "Faili õigused: $PERMS"
-            if echo "$PERMS" | grep -q "rw"; then
-              echo "✅ Failil on omaniku RW õigused"
+            
+            if [ $BONUS_FOUND -gt 0 ]; then
+              echo "⭐ Leitud $BONUS_FOUND lisakäsku (pwd, cd, cat, grep, ls, ps)"
+              echo "   💡 Hea töö! Sa kasutasid rohkem käske kui minimaalselt nõutud"
             else
-              echo "❌ Failil ei ole omaniku RW õiguseid"
-              ERRORS=$((ERRORS+1))
+              echo "💡 Sa said hakkama põhikäskudega, kuid võiksid katsetada ka:"
+              echo "   - pwd (asukoha näitamine)"
+              echo "   - cd (kataloogis liikumine)"
+              echo "   - cat (faili sisu vaatamine)"
+              echo "   - grep (teksti otsimine)"
+              echo "   - ls (failide loetlemine)"
             fi
           fi
-
-          # Kokkuvõte
-          echo "--------------------------------"
+          
+          echo ""
+          
+          # ============================================
+          # KOKKUVÕTE
+          # ============================================
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📊 LÕPLIK KOKKUVÕTE"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "✅ Õnnestunud kontrolle: $SUCCESS"
+          echo "⚠️  Hoiatusi: $WARNINGS"
+          echo "❌ Vigu: $ERRORS"
+          echo ""
+          
           if [ $ERRORS -eq 0 ]; then
-            echo "🎉 Kõik korras! Harjutus läbitud."
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🎉 PALJU ÕNNE! Kõik testid läbitud!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "✓ Failid on olemas"
+            echo "✓ Failidel on sisu"
+            echo "✓ Kõik nõutud käsud on dokumenteeritud"
+            echo "✓ Failiõigused on korrektsed"
+            echo ""
+            echo "📚 Järgmine samm: Liigu edasi Week 05-06 (ROS2 Architecture)"
+            echo ""
             exit 0
           else
-            echo "❌ Kokku leitud vigu: $ERRORS"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "❌ ÜLESANNE VAJAB PARANDAMIST"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "📋 LEITUD VEAD:"
+            echo ""
+            
+            # Näita, mis valesti läks (kategooriate kaupa)
+            if ! [ -d "harjutus" ] || ! [ -f "harjutus/minu_fail.txt" ] || ! [ -f "harjutus/kasutatud_käsud.txt" ]; then
+              echo "🔴 FAILIDE PROBLEEM:"
+              echo "   • Veendu, et 'harjutus' kaust eksisteerib"
+              echo "   • Loo failid: minu_fail.txt ja kasutatud_käsud.txt"
+              echo ""
+            fi
+            
+            echo "📖 PARANDAMISE JUHISED:"
+            echo "   1. Loe Week 03-04 README.md ülesanne tähelepanelikult"
+            echo "   2. Vaata ülalpool täpseid veateateid (❌)"
+            echo "   3. Paranda need failid/käsud"
+            echo "   4. Tee: git add . && git commit -m 'fix: parandused' && git push"
+            echo "   5. Testid käivituvad automaatselt uuesti"
+            echo ""
+            echo "💡 ABILINK: https://github.com/Tallinna-Tehnika-korgkool/TRO029---ROS2-sissejuhatus/tree/main/chapters"
+            echo ""
+            
             exit 1
           fi
+
+      - name: 📝 Create GitHub Summary
+        if: always()
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## 📊 Week 03-04: Linux Commands - Tulemused
+          
+          ### Kontrollide ülevaade:
+          
+          | Kategooria | Kirjeldus | Tulemus |
+          |------------|-----------|---------|
+          | 📂 Failid | harjutus kaust ja failid | ${{ steps.validation.outcome == 'success' && '✅ OK' || '❌ Kontrolli' }} |
+          | 📝 Sisu | Failid sisaldavad teksti | ${{ steps.validation.outcome == 'success' && '✅ OK' || '❌ Kontrolli' }} |
+          | 🔍 Käsud | Nõutud käsud dokumenteeritud | ${{ steps.validation.outcome == 'success' && '✅ OK' || '❌ Kontrolli' }} |
+          | 🔑 Õigused | Failiõigused korrektsed | ${{ steps.validation.outcome == 'success' && '✅ OK' || '❌ Kontrolli' }} |
+          
+          ---
+          
+          ### 📋 Nõutud käsud ülesandes:
+          
+          - ✅ `mkdir` - kataloogi loomine
+          - ✅ `touch` või `echo` - faili loomine
+          - ✅ `chmod` - õiguste muutmine  
+          - ✅ `sleep &` - protsessi taustal käivitamine
+          - ✅ `kill` - protsessi lõpetamine
+          - ✅ `ls -l` - failiõiguste vaatamine
+          
+          ---
+          
+          ### 🔧 Kui test ebaõnnestus:
+          
+          1. **Vaata detailset väljundit** ülalpool (Assignment Validation samm)
+          2. **Leia punased (❌) vead** ja loe, mida täpselt vaja on
+          3. **Paranda need** oma lokaalses repos
+          4. **Push uuesti:**
+             ```bash
+             git add .
+             git commit -m "fix: parandused week 03-04 ülesandes"
+             git push
+             ```
+          5. **Test käivitub automaatselt uuesti**
+          
+          ---
+          
+          ### 📚 Abimaterjalid:
+          
+          - [Week 03-04 README](https://github.com/Tallinna-Tehnika-korgkool/TRO029---ROS2-sissejuhatus/tree/main/chapters)
+          - [Linux käsud dokumentatsioon](https://linux.die.net/)
+          
+          EOF
