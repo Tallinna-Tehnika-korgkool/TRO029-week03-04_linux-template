@@ -179,26 +179,27 @@ ps aux | grep bash
 
 Harjutuse edukaks esitamiseks **pead töötama oma isiklikus GitHub Classroomi repos**, mis on loodud selle nädala jaoks.
 
-1. Ava ülesande link:
-   [Week 3-4 Linuxi käsurida - Classroom link](https://classroom.github.com/a/Sabk1Fhx)
+1.  **Ava ülesande link Moodle'ist:**
+    - Mine kursuse Moodle'i lehele.
+    - Leia sealt selle nädala (Week 03-04) ülesande juurest link oma isikliku GitHub Classroomi repositooriumi loomiseks.
 
-2. Klooni enda isiklik repo GitHubist (nimi sisaldab sinu GitHubi kasutajanime).
-   Näide:
-   ```bash
-   git clone https://github.com/Tallinna-Tehnika-korgkool/TRO029-week03-04_linux-<sinu_kasutajanimi>
-   ```
+2.  **Klooni enda isiklik repo GitHubist**, mille nimi sisaldab sinu GitHubi kasutajanime.
+    Näide:
+    ```bash
+    git clone https://github.com/Tallinna-Tehnika-korgkool/TRO029-week03-04_linux-<sinu_kasutajanimi>
+    ```
 
-3. Tee kõik sammud selles kloonitud repos kaustas `/workspace/harjutus`.
+3.  **Tee kõik ülesanded selles kloonitud repos.**
 
-4. Lisa ja commit'i oma failid (`minu_fail.txt`, `kasutatud_kasud.txt`, jne).
-   ```bash
-   git add .
-   git commit -m "Week 3-4 Linux harjutus"
-   git push
-   ```
+4.  **Lisa ja `commit`'i oma muudatused** (nt. `minu_fail.txt`, `kasutatud_kasud.txt`).
+    ```bash
+    git add .
+    git commit -m "docs: Complete week 3-4 exercise"
+    git push
+    ```
 
-5. Kui push on tehtud, käivituvad automaatsed testid (GitHub Actions) sinu repo **Actions** vahekaardil.
-   - ✅ **Roheline** ✔️ tähendab, et kõik vajalikud failid on olemas ja õigesti tehtud.
-   - ❌ **Punane** ✖️ tähendab, et midagi on puudu või valesti – paranda ja tee uus commit.
+5.  Kui `push` on tehtud, käivituvad **automaatsed testid** (GitHub Actions) sinu repo **Actions** vahekaardil.
+    - ✅ **Roheline** ✔️ tähendab, et kõik on korras.
+    - ❌ **Punane** ✖️ tähendab, et midagi on puudu või valesti – paranda ja tee uus `commit` ja `push`.
 
-> **NB!** Kui töötad väljaspool oma Classroom repo't, siis testid ei tööta ja harjutust ei loeta esitatuks.
+> **NB!** Kui töötad väljaspool oma isiklikku Classroom repo't, siis testid ei tööta ja harjutust ei loeta esitatuks.
